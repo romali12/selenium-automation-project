@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import StaleElementReferenceException
 
 
 @pytest.fixture
@@ -25,13 +26,19 @@ def test_search_product_keyword(driver):
     search_box.send_keys("ca")
 
     # Wait for products to load
-    results = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//div[@class='products']/div")))
-    print(f"Number of results found: {len(results)}")
-    assert len(results) > 0
+    wait.until(EC.presence_of_all_elements_located((By.XPATH, "//div[@class='products']/div")))
 
-    # Add all products to cart
-    for result in results:
-        result.find_element(By.XPATH, "div/button").click()
+    # Add all products to cart (stale-element safe)
+    products = driver.find_elements(By.XPATH, "//div[@class='products']/div")
+    for i in range(len(products)):
+        retry = 0
+        while retry < 3:
+            try:
+                buttons = driver.find_elements(By.XPATH, "//div[@class='product-action']/button")
+                wait.until(EC.element_to_be_clickable(buttons[i])).click()
+                break
+            except StaleElementReferenceException:
+                retry += 1
 
     # Open cart
     wait.until(EC.element_to_be_clickable((By.XPATH, "//img[@alt='Cart']"))).click()
@@ -46,7 +53,7 @@ def test_search_product_keyword(driver):
     # Apply promo code
     driver.find_element(By.CSS_SELECTOR, ".promoBtn").click()
 
-    # Wait for promo confirmation (IMPORTANT FIX)
+    # Wait for promo confirmation
     promo_text = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".promoInfo"))).text
     print("Promo message:", promo_text)
 
@@ -62,3 +69,4 @@ def test_search_product_keyword(driver):
 
     # Proceed
     wait.until(EC.element_to_be_clickable((By.XPATH, "//button[text()='Proceed']"))).click()
+    
