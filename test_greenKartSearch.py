@@ -4,14 +4,14 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
+from webdriver_manager.chrome import ChromeDriverManager
 
 @pytest.fixture
 def driver():
-    service_obj = Service("C:/Users/Dixit/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe")
-    driver = webdriver.Chrome(service=service_obj)
+    # Automatically download correct ChromeDriver version
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
     driver.get("https://rahulshettyacademy.com/seleniumPractise/#/")
     driver.maximize_window()
-    driver.implicitly_wait(5)
     yield driver
     driver.quit()
 
