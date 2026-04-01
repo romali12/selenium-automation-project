@@ -1,63 +1,64 @@
 import pytest
-import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from webdriver_manager.chrome import ChromeDriverManager
 
+
 @pytest.fixture
 def driver():
-    # Automatically download correct ChromeDriver version
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    driver.get("https://rahulshettyacademy.com/seleniumPractise/#/")
     driver.maximize_window()
+    driver.get("https://rahulshettyacademy.com/seleniumPractise/#/")
     yield driver
     driver.quit()
 
-def test_search_product_keyword(driver):
-    search_box = driver.find_element(By.CSS_SELECTOR, ".search-keyword")
-    search_box.send_keys("ca")
-    time.sleep(2)
 
-    # Product match using this keyword
-    results = driver.find_elements(By.XPATH, "//div[@class='products']/div")
-    count = len(results)
-    print(f"Number of results found: {count}")
-    assert count > 0
+def test_search_product_keyword(driver):
+    wait = WebDriverWait(driver, 15)
+
+    # Search product
+    search_box = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".search-keyword")))
+    search_box.send_keys("ca")
+
+    # Wait for products to load
+    results = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//div[@class='products']/div")))
+    print(f"Number of results found: {len(results)}")
+    assert len(results) > 0
+
+    # Add all products to cart
     for result in results:
         result.find_element(By.XPATH, "div/button").click()
-    time.sleep(2)
 
-    #Click mini cart
-    driver.find_element(By.XPATH, "//img[@alt='Cart']").click()
-    time.sleep(2)
+    # Open cart
+    wait.until(EC.element_to_be_clickable((By.XPATH, "//img[@alt='Cart']"))).click()
 
-    #Click checkout button
-    driver.find_element(By.XPATH,"//button[text()='PROCEED TO CHECKOUT']").click()
-    time.sleep(2)
+    # Proceed to checkout
+    wait.until(EC.element_to_be_clickable((By.XPATH, "//button[text()='PROCEED TO CHECKOUT']"))).click()
 
-    #Apply promocode
-    driver.find_element(By.CSS_SELECTOR,".promoCode").send_keys("rahulshettyacademy")
-    time.sleep(2)
+    # Enter promo code
+    promo_input = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".promoCode")))
+    promo_input.send_keys("rahulshettyacademy")
 
-    #Click apply button
+    # Apply promo code
     driver.find_element(By.CSS_SELECTOR, ".promoBtn").click()
-    print(driver.find_element(By.CSS_SELECTOR,".promoInfo").text)
-    time.sleep(2)
 
-    #Click on place order button
-    driver.find_element(By.XPATH,"//button[text()='Place Order']").click()
-    time.sleep(2)
+    # Wait for promo confirmation (IMPORTANT FIX)
+    promo_text = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".promoInfo"))).text
+    print("Promo message:", promo_text)
 
-    #Find the dropdown and select India
-    Select(driver.find_element("tag name", "select")).select_by_visible_text("India")
-    time.sleep(2)
+    # Place order
+    wait.until(EC.element_to_be_clickable((By.XPATH, "//button[text()='Place Order']"))).click()
 
-    #Click checkbox
-    driver.find_element(By.CSS_SELECTOR,".chkAgree").click()
-    time.sleep(2)
+    # Select country
+    country_dropdown = wait.until(EC.presence_of_element_located((By.TAG_NAME, "select")))
+    Select(country_dropdown).select_by_visible_text("India")
 
-    #Click proceed button
-    driver.find_element(By.XPATH, "//button[text()='Proceed']").click()
-    time.sleep(2)
+    # Agree terms
+    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".chkAgree"))).click()
+
+    # Proceed
+    wait.until(EC.element_to_be_clickable((By.XPATH, "//button[text()='Proceed']"))).click()
